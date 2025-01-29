@@ -1,17 +1,27 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
-import { env, Env } from './env.js';
+import { env } from './env.js';
+import * as dotenv from 'dotenv';
+
+// Load environment variables at startup
+dotenv.config();
 
 const app = new Hono();
 
 app.get('/', (c) => {
+  const testenv = env({ process_env: process.env }); // Use process.env directly
+  const telegram_bot_token = testenv.TELEGRAM_BOT_TOKEN;
+
+  if (!telegram_bot_token) {
+    console.log('Available env vars:', process.env);
+    return c.text('Telegram Bot Webhook Server is running! but no token found');
+  }
   return c.text('Telegram Bot Webhook Server is running!');
 });
 
 app.post('/', async (c) => {
   try {
-    const p_env = c.env as Env;
-    const parsed_env = env({ process_env: p_env });
+    const parsed_env = env({ process_env: process.env }); // Use process.env directly
 
     const body = await c.req.json();
     console.log('Received message:', JSON.stringify(body, null, 2));
