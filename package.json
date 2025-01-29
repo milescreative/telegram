@@ -1,21 +1,22 @@
 {
   "name": "miles_creative_bot",
-  "module": "index.ts",
   "type": "module",
   "version": "1.0.0",
   "scripts": {
-    "dev": "bun --watch index.ts",
-    "start": "bun run build/index.js",
-    "build": "bun build --target=bun index.ts  --outdir ./build",
-    "typecheck": "bun type-check",
-    "lint": "bun lint",
-    "docker:build": "docker build --pull -t miles_creative_bot .",
-    "docker:run": "docker run -p 3000:3000 miles_creative_bot"
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
+    "@types/node": "latest",
+    "tsx": "^4.7.1",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.8.2",
+    "@t3-oss/env-core": "^0.12.0",
+    "hono": "^4.0.9",
+    "zod": "^3.24.1"
   }
 }
