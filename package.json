@@ -8,7 +8,9 @@
     "start": "bun run build/index.js",
     "build": "bun build --target=bun index.ts  --outdir ./build",
     "typecheck": "bun type-check",
-    "lint": "bun lint"
+    "lint": "bun lint",
+    "docker:build": "docker build --pull -t miles_creative_bot .",
+    "docker:run": "docker run -p 3000:3000 miles_creative_bot"
   },
   "devDependencies": {
     "@types/bun": "latest"

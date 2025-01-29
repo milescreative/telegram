@@ -11,17 +11,17 @@ async function handleRequest(req: Request): Promise<Response> {
     console.log('Received message:', JSON.stringify(body, null, 2));
 
     if (!body.message) {
-      return new Response('No message in request', { status: 400 });
+      return new Response('No message in request (mc)', { status: 400 });
     }
 
     const chatId = body.message.chat.id;
     const text = body.message.text;
 
     await sendMessage(chatId, `You said: ${text}`);
-    return new Response('OK');
+    return new Response('OK (mc)');
   } catch (error) {
     console.error('Error handling request:', error);
-    return new Response('Internal server error', { status: 500 });
+    return new Response('Internal server error (mc)', { status: 500 });
   }
 }
 
