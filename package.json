@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "bun --watch index.ts",
-    "start": "bun run ./build/index.js",
+    "start": "bun run build/index.js",
     "build": "bun build --target=bun index.ts  --outdir ./build",
     "typecheck": "bun type-check",
     "lint": "bun lint"
