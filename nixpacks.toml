@@ -4,24 +4,22 @@ providers = ["debian", "bun"]
 
 [phases.setup]
 nixPkgs = [
-    "unzip",
-    "curl",
     "bun"
 ]
 nixpkgsArchive = 'bc7b0a89dbd830397bf834eb38d4e93f1d6a77ca'
 
 [phases.install]
 cmds = [
-    'curl -fsSL https://bun.sh/install | bash -s "bun-v1.2.0" && . /root/.bashrc && bun install'
+    'bun install'
 ]
 
 [phases.build]
 dependsOn = ['install']
-cmds = ['source /root/.bashrc && bun run build']
+cmds = ['bun run build']
 
 [start]
 dependsOn = ['build']
-cmd = 'source /root/.bashrc && bun run start'
+cmd = 'bun run start'
 
 [variables]
 NODE_ENV = 'production'
