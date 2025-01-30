@@ -1,10 +1,12 @@
 [provider]
 provider = "debian"
+providers = ["debian", "bun"]
 
 [phases.setup]
 nixPkgs = [
     "unzip",
-    "curl"
+    "curl",
+    "bun"
 ]
 nixpkgsArchive = 'bc7b0a89dbd830397bf834eb38d4e93f1d6a77ca'
 
@@ -14,9 +16,11 @@ cmds = [
 ]
 
 [phases.build]
+dependsOn = ['install']
 cmds = ['source /root/.bashrc && bun run build']
 
 [start]
+dependsOn = ['build']
 cmd = 'source /root/.bashrc && bun run start'
 
 [variables]
