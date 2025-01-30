@@ -2,11 +2,18 @@
 provider = "debian"
 
 [phases.setup]
-    nixpkgsArchive = 'bc7b0a89dbd830397bf834eb38d4e93f1d6a77ca'
-
+nixPkgs = [
+    "unzip",
+    "curl"
+]
+nixpkgsArchive = 'bc7b0a89dbd830397bf834eb38d4e93f1d6a77ca'
 
 [phases.install]
-cmds = ['bun install']
+cmds = [
+    'curl -fsSL https://bun.sh/install | bash',
+    'source /root/.bashrc',
+    'bun install'
+]
 
 [phases.build]
 cmds = ['bun run build']
