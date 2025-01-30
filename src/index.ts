@@ -1,7 +1,6 @@
-import { Hono } from 'hono';
-import { serve } from '@hono/node-server';
 import { env } from './env.js';
 import * as dotenv from 'dotenv';
+import { Hono } from 'hono';
 
 // Load environment variables at startup
 dotenv.config();
@@ -59,8 +58,4 @@ async function sendMessage(chatId: number, text: string, botToken: string) {
   }
 }
 
-serve(app, (info) => {
-  console.log(
-    `Telegram webhook server running on http://localhost:${info.port}`
-  );
-});
+export default app;

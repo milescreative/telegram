@@ -2,16 +2,17 @@
 provider = "debian"
 
 [phases.setup]
-nixPkgs = ['nodejs', 'pnpm']
+    nixpkgsArchive = 'bc7b0a89dbd830397bf834eb38d4e93f1d6a77ca'
+
 
 [phases.install]
-cmds = ['pnpm install']
+cmds = ['bun install']
 
 [phases.build]
-cmds = ['pnpm build']
+cmds = ['bun run build']
 
 [start]
-cmd = 'node dist/index.js'
+cmd = 'bun run start'
 
 [variables]
 NODE_ENV = 'production'

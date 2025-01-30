@@ -3,21 +3,20 @@
   "type": "module",
   "version": "1.0.0",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
-    "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "dev": "bun run src/index.ts",
+    "start": "bun run dist/index.js",
+    "build": "bun build src/index.ts --outdir dist --minify",
+    "typecheck": "bun --check"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "tsx": "^4.7.1",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "@types/bun": "latest"
   },
   "dependencies": {
-    "@hono/node-server": "^1.8.2",
     "@t3-oss/env-core": "^0.12.0",
     "dotenv": "^16.4.7",
-    "hono": "^4.0.9",
+    "hono": "^4.6.19",
     "zod": "^3.24.1"
-  }
+  },
+  "module": "index.ts"
 }
