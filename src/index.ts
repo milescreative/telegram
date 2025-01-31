@@ -4,128 +4,125 @@ import { Hono } from 'hono';
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 
-// Load environment variables
 dotenv.config();
 
 const app = new Hono();
 
-// GET endpoint for health check
+// GET endpoint remains the same
 app.get('/', (c) => {
   const testenv = env({ process_env: process.env });
   return c.text('Telegram AI Assistant Server is running!');
 });
 
-// POST endpoint for Telegram webhook
+// POST endpoint with proper streaming implementation
 app.post('/', async (c) => {
   try {
     const body = await c.req.json();
-    console.log('Received message:', JSON.stringify(body, null, 2));
-
-    if (!body.message) {
-      return c.json({ error: 'No message in request' }, 400);
-    }
-
     const parsed_env = env({ process_env: process.env });
     const { chat, text } = body.message;
     const botToken = parsed_env.TELEGRAM_BOT_TOKEN;
 
-    // Immediately acknowledge the webhook
+    // Acknowledge immediately
     c.header('Content-Type', 'application/json');
 
-    // Process AI response in the background
+    // Process in background
     processAIResponse(chat.id, text, botToken).catch((error) => {
-      console.error('Error processing AI response:', error);
-      sendMessage(
-        chat.id,
-        '⚠️ An error occurred during response generation',
-        botToken
-      );
+      console.error('AI Processing Error:', error);
+      sendMessage(chat.id, '⚠️ Error generating response', botToken);
     });
 
-    return c.json({ status: 'Processing request...' });
+    return c.json({ status: 'Processing...' });
   } catch (error) {
-    console.error('Error handling request:', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    console.error('Request Handling Error:', error);
+    return c.json({ error: 'Server Error' }, 500);
   }
 });
 
-// AI Response Processor with Streaming Simulation
+// Revised streaming implementation
 async function processAIResponse(
   chatId: number,
   prompt: string,
   botToken: string
 ) {
   let messageId: number | undefined;
-  let lastContent = '';
   let buffer = '';
+  let lastUpdate = Date.now();
+  const updateDebounce = 500; // ms between updates
 
-  // Start the AI stream
-  const result = streamText({
+  const result = await streamText({
     model: openai('gpt-4'),
+    system: 'You are a helpful assistant',
     prompt: prompt,
   });
 
-  // Initial "typing" indicator
+  // Show typing indicator
   await sendChatAction(chatId, 'typing', botToken);
 
-  // Process stream in chunks
-  for await (const delta of result.toDataStream()) {
-    buffer += delta;
+  // Process text stream
+  for await (const textDelta of result.textStream) {
+    buffer += textDelta;
 
-    // Send updates when we reach natural break points or every 20 characters
-    if (/(\n|\. |! |\? |, )/.test(buffer) || buffer.length >= 20) {
-      await updateMessage(chatId, buffer, botToken, messageId);
-      buffer = '';
+    // Split on sentence boundaries or every 100 characters
+    const splitIndex = findNaturalSplit(buffer);
+
+    if (splitIndex > 0 || buffer.length >= 100) {
+      const sendText = buffer.slice(0, splitIndex > 0 ? splitIndex : 100);
+      await debouncedUpdate(sendText);
+      buffer = buffer.slice(sendText.length);
     }
   }
 
-  // Send any remaining content
+  // Send remaining text
   if (buffer.length > 0) {
-    await updateMessage(chatId, buffer, botToken, messageId);
+    await updateMessage(buffer);
   }
 
   // Finalize message
   if (messageId) {
-    await editMessage(chatId, messageId, lastContent + ' ✅', botToken);
+    await editMessage(chatId, messageId, buffer + ' ✅', botToken);
   }
 
-  async function updateMessage(
-    chatId: number,
-    newContent: string,
-    botToken: string,
-    existingMessageId?: number
-  ) {
-    lastContent += newContent;
+  async function debouncedUpdate(content: string) {
+    const now = Date.now();
+    if (now - lastUpdate >= updateDebounce) {
+      await updateMessage(content);
+      lastUpdate = now;
+    }
+  }
 
+  async function updateMessage(content: string) {
     try {
-      if (existingMessageId) {
-        await editMessage(
-          chatId,
-          existingMessageId,
-          lastContent + ' ✍️',
-          botToken
-        );
+      const fullText = buffer;
+      if (messageId) {
+        await editMessage(chatId, messageId, fullText + ' ✍️', botToken);
       } else {
-        const response = await sendMessage(
-          chatId,
-          lastContent + ' ✍️',
-          botToken
-        );
+        const response = await sendMessage(chatId, fullText + ' ✍️', botToken);
         messageId = response.message_id;
       }
+      await sendChatAction(chatId, 'typing', botToken);
     } catch (error) {
-      console.error('Error updating message:', error);
-      // Fallback to new message if editing fails
-      const response = await sendMessage(chatId, lastContent, botToken);
+      console.error('Message Update Error:', error);
+      // Fallback to new message
+      const response = await sendMessage(chatId, content, botToken);
       messageId = response.message_id;
     }
-
-    // Reset typing indicator
-    await sendChatAction(chatId, 'typing', botToken);
   }
 }
 
-// Telegram API Utilities
+// Helper to find natural split points
+function findNaturalSplit(text: string): number {
+  // Split at sentence boundaries or newlines
+  const sentenceEnd = Math.max(
+    text.lastIndexOf('. '),
+    text.lastIndexOf('! '),
+    text.lastIndexOf('? '),
+    text.lastIndexOf('\n')
+  );
+
+  return sentenceEnd > 0 ? sentenceEnd + 1 : -1;
+}
+
+// Telegram API functions remain the same
 async function sendMessage(chatId: number, text: string, botToken: string) {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
   const response = await fetch(url, {
