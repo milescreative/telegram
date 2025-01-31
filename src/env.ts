@@ -7,6 +7,7 @@ export const env = ({ process_env = process.env }: { process_env: Env }) =>
   createEnv({
     server: {
       TELEGRAM_BOT_TOKEN: z.string().min(1),
+      OPENAI_API_KEY: z.string().min(1),
     },
 
     /**
