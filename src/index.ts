@@ -38,16 +38,15 @@ app.post('/', async (c) => {
   }
 });
 
-// Revised streaming implementation
 async function processAIResponse(
   chatId: number,
   prompt: string,
   botToken: string
 ) {
   let messageId: number | undefined;
-  let buffer = '';
+  let fullContent = '';
   let lastUpdate = Date.now();
-  const updateDebounce = 500; // ms between updates
+  const updateDebounce = 500; // Minimum time between updates in ms
 
   const result = await streamText({
     model: openai('gpt-4'),
@@ -55,71 +54,64 @@ async function processAIResponse(
     prompt: prompt,
   });
 
-  // Show typing indicator
+  // Show initial typing indicator
   await sendChatAction(chatId, 'typing', botToken);
 
   // Process text stream
   for await (const textDelta of result.textStream) {
-    buffer += textDelta;
+    fullContent += textDelta;
 
-    // Split on sentence boundaries or every 100 characters
-    const splitIndex = findNaturalSplit(buffer);
+    // Determine if we should update based on content or timing
+    const shouldUpdate =
+      hasNaturalBreak(textDelta) ||
+      fullContent.length % 50 < textDelta.length || // Approximate every 50 chars
+      Date.now() - lastUpdate >= updateDebounce;
 
-    if (splitIndex > 0 || buffer.length >= 100) {
-      const sendText = buffer.slice(0, splitIndex > 0 ? splitIndex : 100);
-      await debouncedUpdate(sendText);
-      buffer = buffer.slice(sendText.length);
+    if (shouldUpdate) {
+      await debouncedUpdate();
     }
   }
 
-  // Send remaining text
-  if (buffer.length > 0) {
-    await updateMessage(buffer);
-  }
+  // Final update with complete content
+  await updateMessage(fullContent);
 
-  // Finalize message
+  // Add completion indicator
   if (messageId) {
-    await editMessage(chatId, messageId, buffer + ' ✅', botToken);
+    await editMessage(chatId, messageId, `${fullContent} ✅`, botToken);
   }
 
-  async function debouncedUpdate(content: string) {
+  async function debouncedUpdate() {
     const now = Date.now();
     if (now - lastUpdate >= updateDebounce) {
-      await updateMessage(content);
+      await updateMessage(fullContent);
       lastUpdate = now;
     }
   }
 
   async function updateMessage(content: string) {
     try {
-      const fullText = buffer;
       if (messageId) {
-        await editMessage(chatId, messageId, fullText + ' ✍️', botToken);
+        // Edit existing message with new content
+        await editMessage(chatId, messageId, `${content} ✍️`, botToken);
       } else {
-        const response = await sendMessage(chatId, fullText + ' ✍️', botToken);
+        // Send initial message
+        const response = await sendMessage(chatId, `${content} ✍️`, botToken);
         messageId = response.message_id;
       }
+      // Reset typing indicator
       await sendChatAction(chatId, 'typing', botToken);
     } catch (error) {
-      console.error('Message Update Error:', error);
-      // Fallback to new message
+      console.error('Message update failed:', error);
+      // Fallback to new message if editing fails
       const response = await sendMessage(chatId, content, botToken);
       messageId = response.message_id;
     }
   }
 }
 
-// Helper to find natural split points
-function findNaturalSplit(text: string): number {
-  // Split at sentence boundaries or newlines
-  const sentenceEnd = Math.max(
-    text.lastIndexOf('. '),
-    text.lastIndexOf('! '),
-    text.lastIndexOf('? '),
-    text.lastIndexOf('\n')
-  );
-
-  return sentenceEnd > 0 ? sentenceEnd + 1 : -1;
+// Helper to detect natural break points in new content
+function hasNaturalBreak(text: string): boolean {
+  return /([.?!]\s|\n|,\s)/.test(text);
 }
 
 // Telegram API functions remain the same
