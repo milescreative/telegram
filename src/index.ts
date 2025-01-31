@@ -3,6 +3,7 @@ import * as dotenv from 'dotenv';
 import { Hono } from 'hono';
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
+import { chatDB } from './db.js';
 
 dotenv.config();
 
@@ -19,17 +20,25 @@ app.post('/', async (c) => {
   try {
     const body = await c.req.json();
     const parsed_env = env({ process_env: process.env });
-    const { chat, text } = body.message;
+
+    // Validate message structure
+    if (!body.message?.chat?.id || !body.message?.text) {
+      return c.json({ error: 'Invalid message format' }, 400);
+    }
+
+    const { message } = body;
     const botToken = parsed_env.TELEGRAM_BOT_TOKEN;
 
     // Acknowledge immediately
     c.header('Content-Type', 'application/json');
 
     // Process in background
-    processAIResponse(chat.id, text, botToken).catch((error) => {
-      console.error('AI Processing Error:', error);
-      sendMessage(chat.id, '⚠️ Error generating response', botToken);
-    });
+    processAIResponse(message.chat.id, message.text, botToken, message).catch(
+      (error) => {
+        console.error('AI Processing Error:', error);
+        sendMessage(message.chat.id, '⚠️ Error generating response', botToken);
+      }
+    );
 
     return c.json({ status: 'Processing...' });
   } catch (error) {
@@ -41,16 +50,36 @@ app.post('/', async (c) => {
 async function processAIResponse(
   chatId: number,
   prompt: string,
-  botToken: string
+  botToken: string,
+  message: {
+    from: {
+      id: number;
+      first_name: string;
+      last_name?: string;
+    };
+  }
 ) {
   let messageId: number | undefined;
   let fullContent = '';
   let lastUpdate = Date.now();
   const updateDebounce = 500; // Minimum time between updates in ms
 
+  // Get recent chat history
+  const recentMessages = chatDB.getRecentMessages(chatId);
+
+  // Format conversation history for context
+  const conversationHistory = recentMessages
+    .map(
+      (msg) => `${msg.user_name}: ${msg.message_text}\nAI: ${msg.ai_response}\n`
+    )
+    .join('\n');
+
+  // Add conversation history to system prompt
+  const systemPrompt = `You are a helpful assistant. Here's the recent conversation history:\n\n${conversationHistory}`;
+
   const result = await streamText({
     model: openai('gpt-4'),
-    system: 'You are a helpful assistant',
+    system: systemPrompt,
     prompt: prompt,
   });
 
@@ -79,6 +108,16 @@ async function processAIResponse(
   if (messageId) {
     await editMessage(chatId, messageId, `${fullContent} ✅`, botToken);
   }
+
+  // After generating the complete response, save to database
+  await chatDB.saveMessage(
+    chatId,
+    message.from.id,
+    `${message.from.first_name} ${message.from.last_name || ''}`.trim(),
+    prompt,
+    fullContent,
+    'gpt-4'
+  );
 
   async function debouncedUpdate() {
     const now = Date.now();
