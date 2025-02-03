@@ -4,10 +4,18 @@ import { Hono } from 'hono';
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { chatDB } from './db.js';
+import { handleNotification, getNotificationStatus } from './notify.js';
 
 dotenv.config();
-
+const parsed_env = env({ process_env: process.env });
 const app = new Hono();
+
+// Debug log for routes
+console.log('\n[DEBUG] Registered routes:');
+console.log('GET /', '- Main endpoint');
+console.log('POST /', '- Main POST endpoint');
+console.log('GET /notify', '- Notification status endpoint');
+console.log('POST /notify', '- Notification handler endpoint\n');
 
 // GET endpoint remains the same
 app.get('/', (c) => {
@@ -19,7 +27,6 @@ app.get('/', (c) => {
 app.post('/', async (c) => {
   try {
     const body = await c.req.json();
-    const parsed_env = env({ process_env: process.env });
 
     // Validate message structure
     if (!body.message?.chat?.id || !body.message?.text) {
@@ -46,6 +53,10 @@ app.post('/', async (c) => {
     return c.json({ error: 'Server Error' }, 500);
   }
 });
+
+// Update notification endpoints
+app.post('/notify', handleNotification);
+app.get('/notify', getNotificationStatus);
 
 async function processAIResponse(
   chatId: number,
@@ -201,4 +212,7 @@ async function sendChatAction(
   });
 }
 
-export default app;
+export default {
+  port: process.env.NODE_ENV === 'production' ? 3000 : 3333,
+  fetch: app.fetch,
+};

@@ -3,7 +3,7 @@
   "type": "module",
   "version": "1.0.0",
   "scripts": {
-    "dev": "bun run src/index.ts",
+    "dev": "bun --hot src/index.ts",
     "start": "bun run dist/index.js",
     "build": "bun build src/index.ts --target=bun --outdir dist --minify",
     "typecheck": "bun --check"
