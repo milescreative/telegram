@@ -15,7 +15,7 @@ export class ChatDB {
   private db: Database;
 
   constructor() {
-    this.db = new Database('chat_history.sqlite');
+    this.db = new Database(process.env.DB_PATH || 'chat_history.sqlite');
     this.init();
   }
 
