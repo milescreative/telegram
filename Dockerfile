@@ -29,14 +29,15 @@ RUN bun install --frozen-lockfile --production
 # Copy built application
 COPY --from=base /app/dist ./dist
 
-# Create directory for SQLite database
-RUN mkdir -p /app/data
+# Create directory for SQLite database and set permissions
+RUN mkdir -p /app/data && chown -R bun:bun /app/data
 
 # Expose port
 EXPOSE 3000
 
 # Set environment for production
 ENV NODE_ENV=production
+ENV DB_PATH=/app/data/chat_history.sqlite
 
 # Start the application
 CMD ["bun", "run", "start"]
