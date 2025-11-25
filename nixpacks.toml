@@ -6,7 +6,7 @@ providers = ["debian", "bun"]
 nixPkgs = [
     "bun"
 ]
-nixpkgsArchive = 'bc7b0a89dbd830397bf834eb38d4e93f1d6a77ca'
+nixpkgsArchive = '5148520bfab61f99fd25fb9ff7bfbb50dad3c9db'
 
 [phases.install]
 cmds = [
