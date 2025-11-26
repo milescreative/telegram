@@ -12,9 +12,7 @@ services:
       # Add your environment variables here
       # - TELEGRAM_BOT_TOKEN=your_bot_token_here
       # - OPENAI_API_KEY=your_openai_api_key_here
-    volumes:
-      # Mount a volume for the SQLite database to persist data
-      - db_data:/app/data
+    # volumes:
       # Optionally mount .env file if you're using it
       # - ./.env:/app/.env:ro
     restart: unless-stopped
@@ -24,6 +22,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-volumes:
-  db_data:
